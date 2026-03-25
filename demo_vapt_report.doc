@@ -1,0 +1,35 @@
+﻿
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12pt; }
+            h1 { text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            td { vertical-align: top; }
+          </style>
+        </head>
+        <body>
+          <h1>VAPT Report</h1>
+          <p style="text-align:center">Generated: 3/25/2026</p>
+          <hr>
+          <table>
+             
+        <tr>
+          <td width="30%" valign="top" style="background-color:#f0f0f0; padding:8px; border:1px solid #ccc;"><b>VR-01: NoSQL Injection Auth Bypass</b></td>
+          <td width="70%" style="padding:8px; border:1px solid #ccc;">
+             <b>Severity:</b> CRITICAL<br>
+             <b>URL:</b> http://testphp.vulnweb.com<br>
+             <b>Description:</b> The application allows authentication bypass via NoSQL operators in the password field.<br>
+             <b>Steps:</b> 1. Send POST to /login
+2. Use {&quot;$gt&quot;:&quot;&quot;} in password
+3. Access granted<br>
+             <b>Impact:</b> Full account takeover.<br>
+             <b>Recommendation:</b> Sanitize inputs.
+          </td>
+        </tr>
+      
+          </table>
+        </body>
+        </html>
+      
