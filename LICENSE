@@ -1,0 +1,33 @@
+👨‍💻 Developed By
+Varun Rajput Cyber Security Researcher & Developer
+
+
+---
+
+## **3. License (MIT)**
+
+GitHub par **MIT License** select karna sabse best rehta hai. Iska content yeh hai:
+
+> Copyright (c) 2026 Varun Rajput
+> 
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software... (etc.)
+
+---
+
+## **4. Step-by-Step: GitHub par Kaise Dalein?**
+
+1.  GitHub par **New Repository** banayein.
+2.  Name rakhein `VulnReport-Pro`.
+3.  **Public** select karein.
+4.  "Add a README file" ko **Uncheck** rehne dein (kyunka hum apna README dalenge).
+5.  Repo banne ke baad, apne computer par ye commands chalayein:
+    ```bash
+    git init
+    git add .
+    git commit -m "Initial release of VulnReport Pro ✨"
+    git branch -M main
+    git remote add origin https://github.com/your-username/VulnReport-Pro.git
+    git push -u origin main
+    ```
+
+---
