@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VulnReport Pro | VAPT Report Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* --- SCREEN STYLES --- */
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #38bdf8;
+      --critical: #ef4444;
+      --high: #f97316;
+      --medium: #eab308;
+      --low: #22c55e;
+      --info: #3b82f6;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Form Inputs */
+    .input-field {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.625rem 0.875rem;
+      color: var(--text-primary);
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    textarea.input-field { min-height: 80px; resize: vertical; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      padding: 0.625rem 1.25rem; border-radius: 6px; font-weight: 600; font-size: 0.875rem;
+      transition: all 0.2s; cursor: pointer; border: none;
+    }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary { background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--text-muted); }
+    .btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--critical); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; padding: 0.25rem 0.625rem;
+      border-radius: 9999px; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .badge-critical { background: rgba(239, 68, 68, 0.15); color: var(--critical); border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-high { background: rgba(249, 115, 22, 0.15); color: var(--high); border: 1px solid rgba(249, 115, 22, 0.3); }
+    .badge-medium { background: rgba(234, 179, 8, 0.15); color: var(--medium); border: 1px solid rgba(234, 179, 8, 0.3); }
+    .badge-low { background: rgba(34, 197, 94, 0.15); color: var(--low); border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: var(--info); border: 1px solid rgba(59, 130, 246, 0.3); }
+
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    /* Tabs */
+    .tab-btn {
+      padding: 0.75rem 1.25rem; font-weight: 600; color: var(--text-secondary);
+      border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer;
+      background: none; border-left: none; border-right: none; border-top: none;
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+      z-index: 100; display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; transition: all 0.3s;
+    }
+    .modal-backdrop.active { opacity: 1; visibility: visible; }
+    .modal-content {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      max-width: 1000px; width: 95%; max-height: 90vh; overflow-y: auto;
+      transform: scale(0.95); transition: transform 0.3s;
+    }
+    .modal-backdrop.active .modal-content { transform: scale(1); }
+
+    /* Animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+
+    /* Table Styles (Shared) */
+    .vapt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .vapt-table th {
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      width: 200px; /* Fixed width for labels */
+      vertical-align: top;
+    }
+    .vapt-table td {
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: top;
+      white-space: pre-wrap; /* Preserves formatting */
+      word-break: break-word;
+    }
+
+    /* Severity specific colors for table */
+    .vapt-table .severity-critical { background-color: #fef2f2; color: #b91c1c; font-weight: 700; }
+    .vapt-table .severity-high { background-color: #fff7ed; color: #c2410c; font-weight: 700; }
+    .vapt-table .severity-medium { background-color: #fefce8; color: #a16207; font-weight: 700; }
+    .vapt-table .severity-low { background-color: #f0fdf4; color: #15803d; font-weight: 700; }
+    .vapt-table .severity-info { background-color: #eff6ff; color: #1d4ed8; font-weight: 700; }
+
+    /* --- PRINT STYLES --- */
+    @media print {
+      /* Reset Dark Mode */
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 12pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* Hide unnecessary UI - FIXED THIS BLOCK */
+      .no-print, header, #entrySection, #summaryCards, #vulnList, .modal-backdrop, #toast, #emptyState {
+        display: none !important;
+      }
+
+      /* Show Print Container */
+      #printContainer {
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      /* Ensure the Report Section itself is visible but transparent */
+      #reportSection {
+          display: block !important;
+          visibility: visible !important;
+      }
+
+      /* Print Layout */
+      .print-page {
+        page-break-after: always;
+        padding: 20mm;
+        box-sizing: border-box;
+      }
+      .print-page:last-child {
+        page-break-after: avoid;
+      }
+
+      /* Print Header */
+      .print-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #1e293b;
+        padding-bottom: 20px;
+      }
+      .print-header h1 { font-size: 24pt; margin: 0; color: #0f172a; }
+      .print-header p { font-size: 10pt; color: #64748b; margin-top: 5px; }
+
+      /* Vulnerability Block */
+      .print-vuln-block {
+        margin-bottom: 40px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        overflow: hidden;
+        page-break-inside: avoid;
+      }
+      
+      /* Title Bar for each vuln in print */
+      .print-vuln-title {
+        background: #1e293b !important;
+        color: white !important;
+        padding: 10px 16px;
+        font-weight: 600;
+        font-size: 14pt;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Table styling for print */
+      .vapt-table {
+        margin: 0;
+      }
+      .vapt-table th {
+        background-color: #f1f5f9 !important;
+        color: #1e293b !important;
+        border-color: #cbd5e1 !important;
+      }
+      .vapt-table td {
+        color: #334155 !important;
+        border-color: #cbd5e1 !important;
+      }
+    }
+
+    /* Screen Table View inside Modal (Dark Mode Friendly) */
+    .screen-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .screen-table th {
+      background-color: rgba(51, 65, 85, 0.5);
+      color: var(--text-primary);
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      width: 200px;
+      vertical-align: top;
+    }
+    .screen-table td {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      vertical-align: top;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-[rgba(15,23,42,0.9)] border-b border-[var(--border)] no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">VR</div>
+          <div>
+            <h1 class="text-base font-bold tracking-tight">VulnReport <span class="text-sky-400">Pro</span></h1>
+            <p class="text-xs text-slate-500 font-mono">VAPT Generator</p>
+          </div>
+        </div>
+        <nav class="hidden sm:flex items-center">
+          <button class="tab-btn active" data-tab="entry" onclick="switchTab('entry')">Add Vulnerability</button>
+          <button class="tab-btn" data-tab="report" onclick="switchTab('report')">
+            View Report <span id="vulnCount" class="ml-2 px-2 py-0.5 bg-slate-700 rounded-full text-xs">0</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- ENTRY SECTION -->
+    <section id="entrySection" class="animate-fade-in no-print">
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold mb-1">New Vulnerability Entry</h2>
+        <p class="text-slate-400">Fill details for the VAPT report table.</p>
+      </div>
+
+      <form id="vulnForm" class="card p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Vulnerability ID</label>
+            <input type="text" id="vulnId" class="input-field font-mono" placeholder="VR-01" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Affected URL(s)</label>
+            <input type="text" id="vulnUrl" class="input-field font-mono" placeholder="https://example.com/api" required>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Vulnerability Name</label>
+            <input type="text" id="vulnName" class="input-field" placeholder="SQL Injection" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Risk Severity</label>
+            <select id="riskSeverity" class="input-field" required>
+              <option value="">Select Severity</option>
+              <option value="CRITICAL">CRITICAL</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
+              <option value="INFO">INFO</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">CWE ID</label>
+            <input type="text" id="cweId" class="input-field" placeholder="CWE-89">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">CVE ID</label>
+            <input type="text" id="cveId" class="input-field" placeholder="CVE-2024-XXXX">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Description</label>
+          <textarea id="description" class="input-field" rows="3" required></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Steps to Reproduce</label>
+          <textarea id="stepsToReproduce" class="input-field" rows="4" required></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Impact / Risk</label>
+          <textarea id="impactRisk" class="input-field" rows="3" required></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">POC / Screenshots / Links</label>
+          <textarea id="poc" class="input-field font-mono text-sm" rows="3" placeholder="Image URLs or text evidence"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Associated Risks</label>
+          <textarea id="associatedRisks" class="input-field" rows="2"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">References</label>
+          <textarea id="references" class="input-field" rows="2"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-400 mb-1.5">Recommendations</label>
+          <textarea id="recommendations" class="input-field" rows="3" required></textarea>
+        </div>
+
+        <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-700">
+          <button type="submit" class="btn btn-primary">Add to Report</button>
+          <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+          <button type="button" class="btn btn-secondary" onclick="loadExample()">Load Example</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- REPORT SECTION -->
+    <section id="reportSection" class="hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 no-print">
+        <div>
+          <h2 class="text-2xl font-bold">VAPT Report</h2>
+          <p class="text-slate-400">Total: <span id="totalCount" class="text-sky-400 font-mono">0</span> vulnerabilities</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button class="btn btn-primary" onclick="window.print()">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print / Save PDF
+          </button>
+          <!-- NEW WORD DOWNLOAD BUTTON -->
+          <button class="btn btn-secondary" onclick="downloadWord()">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Download Word
+          </button>
+          <button class="btn btn-danger" onclick="clearAllData()">Clear All</button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8 no-print">
+        <div class="card p-4 text-center"><div class="text-2xl font-bold text-red-500" id="criticalCount">0</div><div class="text-xs text-slate-500 uppercase">Critical</div></div>
+        <div class="card p-4 text-center"><div class="text-2xl font-bold text-orange-500" id="highCount">0</div><div class="text-xs text-slate-500 uppercase">High</div></div>
+        <div class="card p-4 text-center"><div class="text-2xl font-bold text-yellow-500" id="mediumCount">0</div><div class="text-xs text-slate-500 uppercase">Medium</div></div>
+        <div class="card p-4 text-center"><div class="text-2xl font-bold text-green-500" id="lowCount">0</div><div class="text-xs text-slate-500 uppercase">Low</div></div>
+        <div class="card p-4 text-center col-span-2 sm:col-span-1"><div class="text-2xl font-bold text-blue-500" id="infoCount">0</div><div class="text-xs text-slate-500 uppercase">Info</div></div>
+      </div>
+
+      <!-- Interactive List (Screen Only) -->
+      <div id="vulnList" class="space-y-4 no-print"></div>
+      
+      <!-- Empty State -->
+      <div id="emptyState" class="card p-12 text-center hidden no-print">
+        <h3 class="text-lg font-semibold mb-2">No Data</h3>
+        <button class="btn btn-primary mt-4" onclick="switchTab('entry')">Add First Vulnerability</button>
+      </div>
+
+      <!-- PRINT CONTAINER (Hidden on screen, visible on print) -->
+      <div id="printContainer" class="hidden">
+        <!-- This will be populated by JS for printing -->
+      </div>
+    </section>
+  </main>
+
+  <!-- DETAIL MODAL (Screen View) -->
+  <div id="detailModal" class="modal-backdrop no-print" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="p-4 border-b border-slate-700 flex justify-between items-center">
+        <h3 class="font-bold text-lg" id="modalTitle">Details</h3>
+        <button class="btn btn-secondary text-xs py-1 px-2" onclick="closeDetailModal()">Close</button>
+      </div>
+      <div id="modalContent" class="p-0"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-sky-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 no-print"></div>
+
+  <script>
+    let vulnerabilities = [];
+    
+    // Init
+    function loadData() {
+      const stored = localStorage.getItem('vulnData');
+      if (stored) vulnerabilities = JSON.parse(stored);
+      updateUI();
+      renderList(); // Ensure print container is ready on load
+    }
+    function saveData() {
+      localStorage.setItem('vulnData', JSON.stringify(vulnerabilities));
+    }
+
+    // Tabs
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.getElementById('entrySection').classList.toggle('hidden', tab !== 'entry');
+      document.getElementById('reportSection').classList.toggle('hidden', tab !== 'report');
+      if (tab === 'report') renderList();
+    }
+
+    // Form
+    document.getElementById('vulnForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const v = {
+        id: document.getElementById('vulnId').value.trim(),
+        url: document.getElementById('vulnUrl').value.trim(),
+        name: document.getElementById('vulnName').value.trim(),
+        severity: document.getElementById('riskSeverity').value,
+        cweId: document.getElementById('cweId').value.trim(),
+        cveId: document.getElementById('cveId').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        steps: document.getElementById('stepsToReproduce').value.trim(),
+        impact: document.getElementById('impactRisk').value.trim(),
+        poc: document.getElementById('poc').value.trim(),
+        associatedRisks: document.getElementById('associatedRisks').value.trim(),
+        references: document.getElementById('references').value.trim(),
+        recommendations: document.getElementById('recommendations').value.trim(),
+        date: new Date().toLocaleDateString()
+      };
+      vulnerabilities.push(v);
+      saveData();
+      updateUI();
+      renderList();
+      this.reset();
+      showToast('Vulnerability Added');
+    });
+
+    function clearForm() { document.getElementById('vulnForm').reset(); }
+
+    function loadExample() {
+      document.getElementById('vulnId').value = 'VR-01';
+      document.getElementById('vulnUrl').value = 'https://wvsdemo.mainvps.net/auth/user_signin';
+      document.getElementById('vulnName').value = 'NoSQL Injection Auth Bypass';
+      document.getElementById('riskSeverity').value = 'CRITICAL';
+      document.getElementById('cweId').value = 'CWE-943';
+      document.getElementById('cveId').value = 'N/A';
+      document.getElementById('description').value = 'The application allows authentication bypass via NoSQL operators in the password field.';
+      document.getElementById('stepsToReproduce').value = '1. Send POST to /login\n2. Use {"$gt":""} in password\n3. Access granted';
+      document.getElementById('impactRisk').value = 'Full account takeover.';
+      document.getElementById('recommendations').value = 'Sanitize inputs.';
+      showToast('Example Loaded');
+    }
+
+    // UI Updates
+    function updateUI() {
+      const count = vulnerabilities.length;
+      document.getElementById('vulnCount').textContent = count;
+      document.getElementById('totalCount').textContent = count;
+      
+      const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+      vulnerabilities.forEach(v => counts[v.severity]++);
+      
+      document.getElementById('criticalCount').textContent = counts.CRITICAL;
+      document.getElementById('highCount').textContent = counts.HIGH;
+      document.getElementById('mediumCount').textContent = counts.MEDIUM;
+      document.getElementById('lowCount').textContent = counts.LOW;
+      document.getElementById('infoCount').textContent = counts.INFO;
+    }
+
+    function escapeHtml(t) {
+      return t ? String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
+    }
+
+    // Render List (Screen)
+    function renderList() {
+      const container = document.getElementById('vulnList');
+      const empty = document.getElementById('emptyState');
+      const printDiv = document.getElementById('printContainer');
+      
+      if (vulnerabilities.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        printDiv.innerHTML = '';
+        return;
+      }
+      empty.classList.add('hidden');
+
+      // Render Screen Cards
+      container.innerHTML = vulnerabilities.map((v, i) => `
+        <div class="card p-4 flex justify-between items-start gap-4 animate-fade-in" style="animation-delay:${i*0.05}s">
+          <div>
+            <div class="flex items-center gap-3 mb-1">
+              <span class="font-mono text-sm text-slate-500">${escapeHtml(v.id)}</span>
+              <span class="badge badge-${v.severity.toLowerCase()}">${escapeHtml(v.severity)}</span>
+            </div>
+            <h3 class="font-semibold">${escapeHtml(v.name)}</h3>
+            <p class="text-sm text-slate-500 font-mono truncate max-w-xl">${escapeHtml(v.url)}</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button class="btn btn-secondary text-xs py-1 px-3" onclick="viewDetail(${i})">View</button>
+            <button class="btn btn-danger text-xs py-1 px-3" onclick="deleteVuln(${i})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Render Print Layout (Hidden but ready for Print CSS)
+      printDiv.innerHTML = `
+        <div class="print-page">
+          <div class="print-header">
+            <h1>VULNERABILITY ASSESSMENT REPORT</h1>
+            <p>Generated by VulnReport Pro | Date: ${new Date().toLocaleDateString()}</p>
+          </div>
+          ${vulnerabilities.map((v, i) => `
+            <div class="print-vuln-block">
+              <div class="print-vuln-title">
+                <span>${escapeHtml(v.id)}: ${escapeHtml(v.name)}</span>
+                <span class="badge badge-${v.severity.toLowerCase()}" style="border:none; padding:4px 10px;">${escapeHtml(v.severity)}</span>
+              </div>
+              <table class="vapt-table">
+                <tr><th>Vulnerability ID</th><td>${escapeHtml(v.id)}</td></tr>
+                <tr><th>URL</th><td class="font-mono">${escapeHtml(v.url)}</td></tr>
+                <tr><th>Risk Severity</th><td class="severity-${v.severity.toLowerCase()}">${escapeHtml(v.severity)}</td></tr>
+                <tr><th>CWE ID</th><td>${escapeHtml(v.cweId || 'N/A')}</td></tr>
+                <tr><th>CVE ID</th><td>${escapeHtml(v.cveId || 'N/A')}</td></tr>
+                <tr><th>Description</th><td>${escapeHtml(v.description)}</td></tr>
+                <tr><th>Steps to Reproduce</th><td>${escapeHtml(v.steps)}</td></tr>
+                <tr><th>Impact / Risk</th><td>${escapeHtml(v.impact)}</td></tr>
+                <tr><th>POC / Evidence</th><td>${escapeHtml(v.poc || 'N/A')}</td></tr>
+                <tr><th>Associated Risks</th><td>${escapeHtml(v.associatedRisks || 'N/A')}</td></tr>
+                <tr><th>References</th><td>${escapeHtml(v.references || 'N/A')}</td></tr>
+                <tr><th>Recommendations</th><td>${escapeHtml(v.recommendations)}</td></tr>
+              </table>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // NEW: Download Word Function
+    function downloadWord() {
+      if (vulnerabilities.length === 0) {
+        showToast('No data to export');
+        return;
+      }
+
+      let rows = vulnerabilities.map(v => `
+        <tr>
+          <td width="30%" valign="top" style="background-color:#f0f0f0; padding:8px; border:1px solid #ccc;"><b>${escapeHtml(v.id)}: ${escapeHtml(v.name)}</b></td>
+          <td width="70%" style="padding:8px; border:1px solid #ccc;">
+             <b>Severity:</b> ${escapeHtml(v.severity)}<br>
+             <b>URL:</b> ${escapeHtml(v.url)}<br>
+             <b>Description:</b> ${escapeHtml(v.description)}<br>
+             <b>Steps:</b> ${escapeHtml(v.steps)}<br>
+             <b>Impact:</b> ${escapeHtml(v.impact)}<br>
+             <b>Recommendation:</b> ${escapeHtml(v.recommendations)}
+          </td>
+        </tr>
+      `).join('');
+
+      // Simple clean Word HTML structure
+      let content = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12pt; }
+            h1 { text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            td { vertical-align: top; }
+          </style>
+        </head>
+        <body>
+          <h1>VAPT Report</h1>
+          <p style="text-align:center">Generated: ${new Date().toLocaleDateString()}</p>
+          <hr>
+          <table>
+             ${rows}
+          </table>
+        </body>
+        </html>
+      `;
+
+      let blob = new Blob(['\ufeff', content], {type: 'application/msword'});
+      let url = URL.createObjectURL(blob);
+      let link = document.createElement('a');
+      link.href = url;
+      link.download = 'VAPT_Report.doc';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Word Document Downloaded');
+    }
+
+    // Detail Modal (Screen View) using the same Table Logic
+    function viewDetail(index) {
+      const v = vulnerabilities[index];
+      const modal = document.getElementById('detailModal');
+      document.getElementById('modalTitle').textContent = `${v.id}: ${v.name}`;
+      
+      document.getElementById('modalContent').innerHTML = `
+        <table class="screen-table">
+          <tr><th>Vulnerability ID</th><td>${escapeHtml(v.id)}</td></tr>
+          <tr><th>URL</th><td class="font-mono text-sky-400">${escapeHtml(v.url)}</td></tr>
+          <tr><th>Risk Severity</th><td><span class="badge badge-${v.severity.toLowerCase()}">${escapeHtml(v.severity)}</span></td></tr>
+          <tr><th>CWE ID</th><td>${escapeHtml(v.cweId || 'N/A')}</td></tr>
+          <tr><th>CVE ID</th><td>${escapeHtml(v.cveId || 'N/A')}</td></tr>
+          <tr><th>Description</th><td>${escapeHtml(v.description)}</td></tr>
+          <tr><th>Steps to Reproduce</th><td>${escapeHtml(v.steps)}</td></tr>
+          <tr><th>Impact / Risk</th><td>${escapeHtml(v.impact)}</td></tr>
+          <tr><th>POC / Evidence</th><td>${escapeHtml(v.poc || 'N/A')}</td></tr>
+          <tr><th>Associated Risks</th><td>${escapeHtml(v.associatedRisks || 'N/A')}</td></tr>
+          <tr><th>References</th><td>${escapeHtml(v.references || 'N/A')}</td></tr>
+          <tr><th>Recommendations</th><td>${escapeHtml(v.recommendations)}</td></tr>
+        </table>
+      `;
+      
+      modal.classList.add('active');
+    }
+
+    function closeModal(e) { if(e.target === e.currentTarget) closeDetailModal(); }
+    function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); }
+
+    function deleteVuln(index) {
+      if(confirm('Delete this vulnerability?')) {
+        vulnerabilities.splice(index, 1);
+        saveData();
+        updateUI();
+        renderList();
+        showToast('Deleted');
+      }
+    }
+
+    function clearAllData() {
+      if(confirm('Delete ALL data?')) {
+        vulnerabilities = [];
+        saveData();
+        updateUI();
+        renderList();
+        showToast('Cleared');
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.transform = 'translateY(0)';
+      t.style.opacity = '1';
+      setTimeout(() => { t.style.transform = 'translateY(20px)'; t.style.opacity = '0'; }, 2000);
+    }
+
+    // Init
+    loadData();
+  </script>
+</body>
+</html>
